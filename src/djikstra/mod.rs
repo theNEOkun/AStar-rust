@@ -4,7 +4,7 @@ use super::backend::matrix::Matrix;
 
 use std::collections::{BinaryHeap};
 
-pub fn find_shortest<T: Cell>(mut matrix: Matrix<T>, mut start: Position, end: Position) -> Vec<T> {
+pub fn find_shortest<T: Cell>(mut matrix: &mut Matrix<T>, mut start: Position, end: Position) -> (Vec<T>, Matrix<T>) {
     let mut start_pos = matrix[&start].clone();
     let mut pq = BinaryHeap::new();
 
@@ -43,8 +43,7 @@ pub fn find_shortest<T: Cell>(mut matrix: Matrix<T>, mut start: Position, end: P
         matrix[each.get_position()].set_walk(true);
     }
 
-    println!("Length: {}", path.len());
-    path
+    (path, matrix.clone())
 }
 
 pub fn heuristic(start: &Position, end: &Position) -> u32 {

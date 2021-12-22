@@ -1,12 +1,6 @@
 pub(crate) mod matrix;
 
-use image::{
-    GenericImageView,
-    ImageBuffer,
-    Pixel,
-    Rgb,
-    RgbImage
-};
+use image::{GenericImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::io::Reader as ImageReader;
 use crate::backend::matrix::Matrix;
 use crate::cell::cell::Cell;
@@ -17,6 +11,8 @@ pub struct DataHandle<T: Cell> {
     image: RgbImage,
     diff_x: u32,
     diff_y: u32,
+    top_corner: Position,
+    bottom_corner: Position,
     matrix: Matrix<T>,
 }
 
@@ -25,12 +21,22 @@ impl<T: Cell> DataHandle<T> {
         self.matrix.clone()
     }
 
-    pub fn write_image(&mut self, path: Vec<T>) {
+    pub fn write_image(&mut self, path: &Vec<T>, matrix: &Matrix<T>) {
+        for y_pos in self.top_corner.y()..self.bottom_corner.y() {
+            for x_pos in self.top_corner.x()..self.bottom_corner.x() {
+                if matrix[(y_pos - self.diff_y, x_pos - self.diff_x)].get_visited() {
+                    self.image.put_pixel(
+                        x_pos + (self.diff_x ),
+                        y_pos + (self.diff_y ),
+                        Rgb([0, 255, 0]));
+                }
+            }
+        }
         for each in path {
             self.image.put_pixel(
-                each.x() + (self.diff_x + 1),
-                each.y() + (self.diff_y + 1),
-                Rgb([0, 255, 0]));
+                each.x() + (self.diff_x ),
+                each.y() + (self.diff_y ),
+                Rgb([255, 0, 0]));
         }
 
         self.image.save("./resources/results/output.png");
@@ -44,8 +50,10 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
     let top_corner = get_top_corner(&image);
     let bottom_corner = get_bottom_corner(&image);
 
-    let diff_x = top_corner.x() - 1;
-    let diff_y= top_corner.y() - 1;
+    let diff_x = if top_corner.x() as i32 - 1 > 0 { top_corner.x() - 1 } else { top_corner.x() };
+    let diff_y= if top_corner.y() as i32 - 1 > 0 { top_corner.y() - 1 } else { top_corner.y() };
+
+    println!("{}{}", bottom_corner.y(), bottom_corner.x());
 
     let smaller_image = image.view(
         top_corner.x(),
@@ -59,6 +67,8 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
         image,
         diff_y,
         diff_x,
+        top_corner,
+        bottom_corner,
         matrix: get_matrix(&smaller_image),
     }
 }
@@ -121,7 +131,7 @@ fn get_bottom_corner(image: &RgbImage) -> Position {
         }
     }
     Position {
-        position: (bottomy, bottomx)
+        position: (bottomy + 1, bottomx + 1)
     }
 }
 
@@ -153,7 +163,16 @@ fn test_colorus(pixel: &[u8]) -> u8 {
 }
 
 fn test_black(pixels: &[u8]) -> bool {
-    if pixels[0] == pixels[1] && pixels[0] == pixels[2] && ( pixels[0] <= 160 || pixels[2] <= 160)  {
+    if (pixels[0] == pixels[1] || pixels[0] == pixels[2]) && ( pixels[0] <= 160 || pixels[2] <= 160 )  {
+        return true;
+    }
+    if pixels[0] < 50 && pixels[1] < pixels[0] && pixels[2] < pixels[0] {
+        return true;
+    }
+    if pixels[1] < 50 && pixels[0] < pixels[1] && pixels[2] < pixels[1] {
+        return true;
+    }
+    if pixels[2] < 50 && pixels[1] < pixels[2] && pixels[0] < pixels[2] {
         return true;
     }
     false
