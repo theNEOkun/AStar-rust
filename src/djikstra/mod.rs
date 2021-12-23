@@ -4,8 +4,8 @@ use super::backend::matrix::Matrix;
 
 use std::collections::{BinaryHeap};
 
-pub fn find_shortest<T: Cell>(mut matrix: &mut Matrix<T>, mut start: Position, end: Position) -> (Vec<T>, Matrix<T>) {
-    let mut start_pos = matrix[&start].clone();
+pub fn find_shortest<T: Cell>(matrix: &mut Matrix<T>, start: &Position, end: &Position) -> (Vec<T>, Matrix<T>) {
+    let mut start_pos = matrix[start].clone();
     let mut pq = BinaryHeap::new();
 
     start_pos.set_visited(true);
@@ -37,12 +37,11 @@ pub fn find_shortest<T: Cell>(mut matrix: &mut Matrix<T>, mut start: Position, e
         }
     }
 
-    let path = get_parents(matrix.clone(), &matrix[&start].clone(), end);
+    let path = get_parents(matrix, &matrix[start].clone(), end);
 
     for each in &path {
         matrix[each.get_position()].set_walk(true);
     }
-
     (path, matrix.clone())
 }
 
@@ -50,10 +49,10 @@ pub fn heuristic(start: &Position, end: &Position) -> u32 {
     cmp::max(i32::abs(start.i32x() - end.i32x()), i32::abs(start.i32y() - end.i32y())) as u32
 }
 
-fn get_parents<T: Cell>(matrix: Matrix<T>, start: &T, end: Position) -> Vec<T>{
+fn get_parents<T: Cell>(matrix: &mut Matrix<T>, start: &T, end: &Position) -> Vec<T>{
     let mut path: Vec<T> = Vec::new();
     let mut parent: (u32, u32) = (0, 0);
-    if let Some(parent_pos) = *matrix[(&end)].get_parent() {
+    if let Some(parent_pos) = *matrix[(end)].get_parent() {
         parent = parent_pos;
     }
     let mut last: T = matrix[parent].clone();

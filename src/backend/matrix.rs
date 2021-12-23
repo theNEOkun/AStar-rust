@@ -5,6 +5,38 @@ type Result<T> = std::result::Result<T, DoubleError>;
 
 pub struct DoubleError;
 
+pub struct MatrixIterator<T: Cell> {
+    matrix: Vec<Vec<T>>,
+    x_pos: usize,
+    y_pos: usize,
+}
+
+impl<T: Cell> MatrixIterator<T> {
+    fn new(matrix: Vec<Vec<T>>) -> MatrixIterator<T> {
+        MatrixIterator {
+            matrix,
+            x_pos: 0,
+            y_pos: 0,
+        }
+    }
+}
+
+impl<T: Cell> Iterator for MatrixIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.matrix[self.y_pos][self.x_pos].clone();
+        self.x_pos += 1;
+        if self.x_pos as usize == self.matrix[0].len() {
+            self.y_pos += 1;
+        }
+        if self.x_pos as usize > self.matrix[0].len() && self.y_pos > self.matrix.len() {
+            return None
+        }
+        Some(curr)
+    }
+}
+
 #[derive(Clone)]
 pub struct Matrix<T: Cell> {
     matrix: Vec<Vec<T>>,
@@ -72,6 +104,15 @@ impl<T: Cell> Matrix<T> {
             }
             println!()
         }
+    }
+}
+
+impl<T: Cell> IntoIterator for Matrix<T> {
+    type Item = T;
+    type IntoIter = MatrixIterator<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        MatrixIterator::new(self.matrix)
     }
 }
 

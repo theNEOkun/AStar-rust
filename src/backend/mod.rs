@@ -1,5 +1,6 @@
 pub(crate) mod matrix;
 
+use std::cmp;
 use image::{GenericImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::io::Reader as ImageReader;
 use crate::backend::matrix::Matrix;
@@ -13,6 +14,8 @@ pub struct DataHandle<T: Cell> {
     diff_y: u32,
     top_corner: Position,
     bottom_corner: Position,
+    start: Position,
+    end: Position,
     matrix: Matrix<T>,
 }
 
@@ -41,6 +44,95 @@ impl<T: Cell> DataHandle<T> {
 
         self.image.save("./resources/results/output.png");
     }
+
+    pub fn get_start(&self) -> Position {
+        for y_pos in 0..self.image.height() {
+            for x_pos in 0..self.image.width() {
+                if test_red(self.image.get_pixel(x_pos, y_pos).channels()) {
+                    return self.create_position(x_pos, y_pos);
+                }
+            }
+        }
+        Position { position: (0, 0) }
+    }
+
+    pub fn get_end(&self) -> Position {
+        for y_pos in 0..self.image.height() {
+            for x_pos in 0..self.image.width() {
+                if test_blue(self.image.get_pixel(x_pos, y_pos).channels()) {
+                    return self.create_position(x_pos, y_pos);
+                }
+            }
+        }
+        Position { position: (0, 0) }
+    }
+
+    fn create_position(&self, x_pos: u32, y_pos: u32) -> Position {
+        if x_pos > self.top_corner.x() && y_pos > self.top_corner.y() && x_pos < self.bottom_corner.x() && y_pos < self.bottom_corner.y() {
+            return Position { position: (y_pos - self.diff_y, x_pos - self.diff_x) }
+        }
+        if y_pos < self.top_corner.y() && x_pos > self.top_corner.x() {
+            return Position {
+                position: (0, self.search_x( 0, x_pos - self.diff_x))
+            };
+        }
+        if y_pos > self.top_corner.y() && x_pos < self.top_corner.x() {
+            return Position {
+                position: (self.search_y(y_pos - self.diff_y, 0), 0)
+            };
+        }
+        if y_pos > self.bottom_corner.y() && x_pos < self.bottom_corner.x() {
+
+            return Position {
+                position: ((self.matrix.y_size() - 1) as u32, self.search_x((self.matrix.y_size() - 1) as u32, x_pos - self.diff_x))
+            };
+        }
+        if y_pos < self.bottom_corner.y() && x_pos > self.bottom_corner.x() {
+            return Position {
+                position: (self.search_y((y_pos - self.diff_y), (self.matrix.x_size() - 1) as u32), (self.matrix.x_size() - 1) as u32)
+            };
+        }
+
+        Position { position: (0, 0) }
+    }
+
+    fn search_x(&self, y_pos: u32, x_pos: u32) -> u32 {
+        let mut counter:u32 = 0;
+        let mut start: bool = false;
+
+        for i in 0..self.bottom_corner.x() {
+            println!("({})", self.matrix[(y_pos, i)].is_wall());
+            println!("({}, {})", y_pos, i);
+            if self.matrix[(y_pos, i)].is_wall() && !start {
+                start = true;
+            }
+            if !self.matrix[(y_pos, i)].is_wall() && start {
+                counter += 1;
+            }
+            if counter >= 5 {
+                return i;
+            }
+        }
+        1
+    }
+
+    fn search_y(&self, y_pos: u32, x_pos: u32) -> u32 {
+        let mut counter:u32 = 0;
+        let mut start: bool = false;
+
+        for i in 0..self.bottom_corner.y() {
+            if self.matrix[(i, x_pos)].is_wall() && !start {
+                start = true;
+            }
+            if !self.matrix[(i, x_pos)].is_wall() && start {
+                counter += 1;
+            }
+            if counter >= 5 {
+                return i;
+            }
+        }
+        1
+    }
 }
 
 pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
@@ -52,8 +144,6 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
 
     let diff_x = if top_corner.x() as i32 - 1 > 0 { top_corner.x() - 1 } else { top_corner.x() };
     let diff_y= if top_corner.y() as i32 - 1 > 0 { top_corner.y() - 1 } else { top_corner.y() };
-
-    println!("{}{}", bottom_corner.y(), bottom_corner.x());
 
     let smaller_image = image.view(
         top_corner.x(),
@@ -69,6 +159,8 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
         diff_x,
         top_corner,
         bottom_corner,
+        start: Position { position: (0, 0) },
+        end: Position { position: (0, 0) },
         matrix: get_matrix(&smaller_image),
     }
 }
@@ -179,14 +271,14 @@ fn test_black(pixels: &[u8]) -> bool {
 }
 
 fn test_red(pixels: &[u8]) -> bool {
-    if pixels[0] >= 160 && pixels[1] <= 100 && pixels[2] <= 100 {
+    if pixels[0] >= 150 && (pixels[1] < 100 || pixels[2] < 100){
         return true;
     }
     false
 }
 
 fn test_blue(pixels: &[u8]) -> bool {
-    if pixels[0] <= 100 && pixels[1] <= 100 && pixels[2] >= 160 {
+    if (pixels[0] < 100 || pixels[1] < 100) && pixels[2] >= 150 {
         return true;
     }
     false
