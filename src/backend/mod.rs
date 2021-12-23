@@ -102,33 +102,28 @@ impl<T: Cell> DataHandle<T> {
         let mut counter:u32 = 0;
         let mut start: bool = false;
 
-        let half_x = (self.matrix.x_size()/2) as u32;
-
-        if x_pos > half_x {
-            for i in half_x..(self.bottom_corner.x() - 1) {
-                if self.matrix[(y_pos, i)].is_wall() && !start {
-                    start = true;
-                }
-                if !self.matrix[(y_pos, i)].is_wall() && start {
-                    counter += 1;
-                }
-                if counter >= 5 {
-                    return i;
-                }
+        for i in cmp::max(x_pos, self.top_corner.x())..(self.matrix.x_size() as u32) {
+            if self.matrix[(y_pos, i)].is_wall() && !start {
+                start = true;
             }
-        } else {
-            for i in (0..x_pos).rev() {
-                if self.matrix[(y_pos, i)].is_wall() && !start {
-                    start = true;
-                }
-                if !self.matrix[(y_pos, i)].is_wall() && start {
-                    counter += 1;
-                }
-                if counter >= 5 {
-                    return i;
-                }
+            if !self.matrix[(y_pos, i)].is_wall() && start {
+                counter += 1;
             }
-        };
+            if counter >= 5 {
+                return i;
+            }
+        }
+        for i in (0..cmp::min(x_pos, self.matrix.x_size() as u32)).rev() {
+            if self.matrix[(y_pos, i)].is_wall() && !start {
+                start = true;
+            }
+            if !self.matrix[(y_pos, i)].is_wall() && start {
+                counter += 1;
+            }
+            if counter >= 5 {
+                return i;
+            }
+        }
         1
     }
 
@@ -136,32 +131,28 @@ impl<T: Cell> DataHandle<T> {
         let mut counter:u32 = 0;
         let mut start: bool = false;
 
-        let half_y = (self.matrix.y_size()/2) as u32;
-        if y_pos > half_y {
-            for i in half_y..self.bottom_corner.y() {
-                if self.matrix[(i, x_pos)].is_wall() && !start {
-                    start = true;
-                }
-                if !self.matrix[(i, x_pos)].is_wall() && start {
-                    counter += 1;
-                }
-                if counter >= 5 {
-                    return i;
-                }
+        for i in cmp::max(y_pos, self.top_corner.y())..(self.matrix.y_size() as u32) {
+            if self.matrix[(i, x_pos)].is_wall() && !start {
+                start = true;
             }
-        } else {
-            for i in (0..y_pos).rev() {
-                if self.matrix[(i, x_pos)].is_wall() && !start {
-                    start = true;
-                }
-                if !self.matrix[(i, x_pos)].is_wall() && start {
-                    counter += 1;
-                }
-                if counter >= 5 {
-                    return i;
-                }
+            if !self.matrix[(i, x_pos)].is_wall() && start {
+                counter += 1;
             }
-        };
+            if counter >= 5 {
+                return i;
+            }
+        }
+        for i in (0..cmp::min(y_pos, self.matrix.y_size() as u32)).rev() {
+            if self.matrix[(i, x_pos)].is_wall() && !start {
+                start = true;
+            }
+            if !self.matrix[(i, x_pos)].is_wall() && start {
+                counter += 1;
+            }
+            if counter >= 5 {
+                return i;
+            }
+        }
         1
     }
 }
@@ -179,8 +170,8 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
     let smaller_image = image.view(
         top_corner.x(),
         top_corner.y(),
-        (bottom_corner.x() - diff_x - 1),
-        (bottom_corner.y() - diff_y - 1)
+        (bottom_corner.x() - diff_x),
+        (bottom_corner.y() - diff_y)
     ).to_image();
 
     DataHandle {
@@ -281,23 +272,46 @@ fn get_matrix<T:Cell>(image: &RgbImage) -> Matrix<T> {
     for y in 0..new_size_y {
         for x in 0..new_size_x {
             let pixel = image.get_pixel(x, y).channels();
-            matrix[(y, x)] = T::new(y, x, test_colorus(pixel));
+            matrix[(y, x)] = T::new(y,
+                                    x,
+                                    if test_adjecent(image, x, y) { 1 } else { test_colorus(pixel) });
         }
     }
     matrix
 }
 
 fn test_colorus(pixel: &[u8]) -> u8 {
-    if test_black(pixel) == true {
+    if test_black(pixel) {
         return 1
     }
-    if test_red(pixel) == true {
+    if test_red(pixel) {
         return 2
     }
-    if test_blue(pixel) == true {
+    if test_blue(pixel) {
         return 3
     }
     0
+}
+
+fn test_adjecent(image: &RgbImage, x_pos: u32, y_pos: u32) -> bool {
+    let test_x = x_pos as i32;
+    let test_y = y_pos as i32;
+    if test_x-1 < 0 || test_y - 1 < 0 || test_x + 1 >= image.width() as i32 || test_y + 1 >= image.height() as i32 {
+        return false;
+    }
+    if test_black(image.get_pixel(x_pos, y_pos + 1).channels()) && test_black( image.get_pixel(x_pos + 1, y_pos).channels()) {
+        return true;
+    }
+    if test_black(image.get_pixel(x_pos, y_pos - 1).channels()) && test_black( image.get_pixel(x_pos - 1, y_pos).channels()) {
+        return true;
+    }
+    if test_black(image.get_pixel(x_pos, y_pos + 1).channels()) && test_black( image.get_pixel(x_pos - 1, y_pos).channels()) {
+        return true;
+    }
+    if test_black(image.get_pixel(x_pos, y_pos - 1).channels()) && test_black( image.get_pixel(x_pos + 1, y_pos).channels()) {
+        return true;
+    }
+    false
 }
 
 fn test_black(pixels: &[u8]) -> bool {
