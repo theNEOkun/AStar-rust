@@ -1,6 +1,8 @@
 pub(crate) mod matrix;
 
 use std::cmp;
+use std::fs::File;
+use std::io::Write;
 use image::{GenericImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
 use image::io::Reader as ImageReader;
 use crate::backend::matrix::Matrix;
@@ -25,20 +27,20 @@ impl<T: Cell> DataHandle<T> {
     }
 
     pub fn write_image(&mut self, path: &Vec<T>, matrix: &Matrix<T>) {
-        for y_pos in self.top_corner.y()..self.bottom_corner.y() {
-            for x_pos in self.top_corner.x()..self.bottom_corner.x() {
-                if matrix[(y_pos - self.diff_y, x_pos - self.diff_x)].get_visited() {
+        for y_pos in self.top_corner.y()..(self.bottom_corner.y() - 1) {
+            for x_pos in self.top_corner.x()..(self.bottom_corner.x() - 1) {
+                if matrix[(y_pos - (self.diff_y), x_pos - (self.diff_x))].get_visited() {
                     self.image.put_pixel(
-                        x_pos + (self.diff_x ),
-                        y_pos + (self.diff_y ),
+                        x_pos,
+                        y_pos,
                         Rgb([0, 255, 0]));
                 }
             }
         }
         for each in path {
             self.image.put_pixel(
-                each.x() + (self.diff_x ),
-                each.y() + (self.diff_y ),
+                each.x() + (self.diff_x),
+                each.y() + (self.diff_y),
                 Rgb([255, 0, 0]));
         }
 
@@ -100,19 +102,33 @@ impl<T: Cell> DataHandle<T> {
         let mut counter:u32 = 0;
         let mut start: bool = false;
 
-        for i in 0..self.bottom_corner.x() {
-            println!("({})", self.matrix[(y_pos, i)].is_wall());
-            println!("({}, {})", y_pos, i);
-            if self.matrix[(y_pos, i)].is_wall() && !start {
-                start = true;
+        let half_x = (self.matrix.x_size()/2) as u32;
+
+        if x_pos > half_x {
+            for i in half_x..(self.bottom_corner.x() - 1) {
+                if self.matrix[(y_pos, i)].is_wall() && !start {
+                    start = true;
+                }
+                if !self.matrix[(y_pos, i)].is_wall() && start {
+                    counter += 1;
+                }
+                if counter >= 5 {
+                    return i;
+                }
             }
-            if !self.matrix[(y_pos, i)].is_wall() && start {
-                counter += 1;
+        } else {
+            for i in (0..x_pos).rev() {
+                if self.matrix[(y_pos, i)].is_wall() && !start {
+                    start = true;
+                }
+                if !self.matrix[(y_pos, i)].is_wall() && start {
+                    counter += 1;
+                }
+                if counter >= 5 {
+                    return i;
+                }
             }
-            if counter >= 5 {
-                return i;
-            }
-        }
+        };
         1
     }
 
@@ -120,17 +136,32 @@ impl<T: Cell> DataHandle<T> {
         let mut counter:u32 = 0;
         let mut start: bool = false;
 
-        for i in 0..self.bottom_corner.y() {
-            if self.matrix[(i, x_pos)].is_wall() && !start {
-                start = true;
+        let half_y = (self.matrix.y_size()/2) as u32;
+        if y_pos > half_y {
+            for i in half_y..self.bottom_corner.y() {
+                if self.matrix[(i, x_pos)].is_wall() && !start {
+                    start = true;
+                }
+                if !self.matrix[(i, x_pos)].is_wall() && start {
+                    counter += 1;
+                }
+                if counter >= 5 {
+                    return i;
+                }
             }
-            if !self.matrix[(i, x_pos)].is_wall() && start {
-                counter += 1;
+        } else {
+            for i in (0..y_pos).rev() {
+                if self.matrix[(i, x_pos)].is_wall() && !start {
+                    start = true;
+                }
+                if !self.matrix[(i, x_pos)].is_wall() && start {
+                    counter += 1;
+                }
+                if counter >= 5 {
+                    return i;
+                }
             }
-            if counter >= 5 {
-                return i;
-            }
-        }
+        };
         1
     }
 }
@@ -142,14 +173,14 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
     let top_corner = get_top_corner(&image);
     let bottom_corner = get_bottom_corner(&image);
 
-    let diff_x = if top_corner.x() as i32 - 1 > 0 { top_corner.x() - 1 } else { top_corner.x() };
-    let diff_y= if top_corner.y() as i32 - 1 > 0 { top_corner.y() - 1 } else { top_corner.y() };
+    let diff_x = top_corner.x();
+    let diff_y= top_corner.y();
 
     let smaller_image = image.view(
         top_corner.x(),
         top_corner.y(),
-        (bottom_corner.x() - diff_x),
-        (bottom_corner.y() - diff_y)
+        (bottom_corner.x() - diff_x - 1),
+        (bottom_corner.y() - diff_y - 1)
     ).to_image();
 
     DataHandle {
@@ -171,6 +202,19 @@ fn get_image(file_name: &str) -> RgbImage {
         .decode()
         .expect("Something else went wrong")
         .into_rgb8()
+}
+
+pub fn write_matrix<T: Cell>(matrix: &Matrix<T>) {
+    let file = File::create("./resources/results/test");
+    if let Ok(mut writer) = file {
+        for y in 0..matrix.y_size() {
+            for x in 0..matrix.x_size() {
+                writer.write(format!("{}", &matrix[(y, x)]).as_ref());
+                writer.write(" ".as_ref());
+            }
+            writer.write("\n".as_ref());
+        }
+    }
 }
 
 fn get_top_corner(image: &RgbImage) -> Position {
