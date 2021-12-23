@@ -197,7 +197,9 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
 }
 
 fn get_image(file_name: &str) -> RgbImage {
-    ImageReader::open(format!("./resources/images/{}.jpg", file_name))
+    let formatted = format!("./resources/images/{}.jpg", file_name);
+    println!("{}", formatted);
+    ImageReader::open(formatted)
         .expect("Something went wrong")
         .decode()
         .expect("Something else went wrong")
