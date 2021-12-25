@@ -1,10 +1,15 @@
 pub(crate) mod matrix;
+pub(crate) mod file_handler;
 
 use std::cmp;
-use std::fs::File;
-use std::io::Write;
-use image::{GenericImage, GenericImageView, ImageBuffer, Pixel, Rgb, RgbImage};
-use image::io::Reader as ImageReader;
+use image::{
+    GenericImage,
+    GenericImageView,
+    ImageBuffer,
+    Pixel,
+    Rgb,
+    RgbImage
+};
 use crate::backend::matrix::Matrix;
 use crate::cell::cell::Cell;
 use crate::Position;
@@ -43,8 +48,7 @@ impl<T: Cell> DataHandle<T> {
                 each.y() + (self.diff_y),
                 Rgb([255, 0, 0]));
         }
-
-        self.image.save("./resources/results/output.png");
+        file_handler::write_image(&self.image, "output")
     }
 
     pub fn get_start(&self) -> Position {
@@ -159,7 +163,7 @@ impl<T: Cell> DataHandle<T> {
 
 pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
 
-    let image = get_image(&file_name);
+    let image = file_handler::read_image(&file_name);
 
     let top_corner = get_top_corner(&image);
     let bottom_corner = get_bottom_corner(&image);
@@ -187,28 +191,7 @@ pub(crate) fn get_data<T: Cell>(file_name: String) -> DataHandle<T> {
     }
 }
 
-fn get_image(file_name: &str) -> RgbImage {
-    let formatted = format!("./resources/images/{}.jpg", file_name);
-    println!("{}", formatted);
-    ImageReader::open(formatted)
-        .expect("Something went wrong")
-        .decode()
-        .expect("Something else went wrong")
-        .into_rgb8()
-}
 
-pub fn write_matrix<T: Cell>(matrix: &Matrix<T>) {
-    let file = File::create("./resources/results/test");
-    if let Ok(mut writer) = file {
-        for y in 0..matrix.y_size() {
-            for x in 0..matrix.x_size() {
-                writer.write(format!("{}", &matrix[(y, x)]).as_ref());
-                writer.write(" ".as_ref());
-            }
-            writer.write("\n".as_ref());
-        }
-    }
-}
 
 fn get_top_corner(image: &RgbImage) -> Position {
     let full_size_y = image.height();
@@ -294,9 +277,7 @@ fn test_colorus(pixel: &[u8]) -> u8 {
 }
 
 fn test_adjecent(image: &RgbImage, x_pos: u32, y_pos: u32) -> bool {
-    let test_x = x_pos as i32;
-    let test_y = y_pos as i32;
-    if test_x-1 < 0 || test_y - 1 < 0 || test_x + 1 >= image.width() as i32 || test_y + 1 >= image.height() as i32 {
+    if (x_pos as i32) - 1 < 0 || (y_pos as i32) - 1 < 0 || x_pos + 1 >= image.width() || y_pos + 1 >= image.height() {
         return false;
     }
     if test_black(image.get_pixel(x_pos, y_pos + 1).channels()) && test_black( image.get_pixel(x_pos + 1, y_pos).channels()) {
@@ -332,14 +313,16 @@ fn test_black(pixels: &[u8]) -> bool {
 
 fn test_red(pixels: &[u8]) -> bool {
     if pixels[0] >= 150 && (pixels[1] < 100 || pixels[2] < 100){
-        return true;
+        true
+    } else {
+        false
     }
-    false
 }
 
 fn test_blue(pixels: &[u8]) -> bool {
     if (pixels[0] < 100 || pixels[1] < 100) && pixels[2] >= 150 {
-        return true;
+        true
+    } else {
+        false
     }
-    false
 }

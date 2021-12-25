@@ -2,17 +2,31 @@ mod backend;
 mod cell;
 mod djikstra;
 
-use std::io;
-use crate::backend::DataHandle;
-use crate::cell::{
-    MyCell,
+use std::{
+    io,
+    fs,
 };
-use crate::cell::cell::Position;
+use crate::{
+    cell::{
+        MyCell,
+        cell::Position
+    },
+    backend::file_handler,
+    backend::DataHandle
+};
 
 fn main() -> io::Result<()> {
     let mut buffer = String::new();
     let mut stdin = io::stdin();
+    if let Ok(Values) = file_handler::read_directory() {
+        for value in Values {
+            if let Some(name) = value?.path().file_name() {
+                println!("{:?}", name);
+            }
+        }
+    }
 
+    println!("Choose a file");
     loop {
         buffer = String::new();
         stdin.read_line(&mut buffer);
@@ -30,6 +44,7 @@ fn main() -> io::Result<()> {
         } else {
             break;
         }
+        println!("Choose a new file")
     }
     Ok(())
 }
