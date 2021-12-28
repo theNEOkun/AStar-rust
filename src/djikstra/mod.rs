@@ -1,10 +1,14 @@
-use std::cmp;
-use super::cell::{cell::Cell, cell::Position };
 use super::backend::matrix::Matrix;
+use super::cell::{cell::Cell, cell::Position};
+use std::cmp;
 
-use std::collections::{BinaryHeap};
+use std::collections::BinaryHeap;
 
-pub fn find_shortest<T: Cell>(matrix: &mut Matrix<T>, start: &Position, end: &Position) -> (Vec<T>, Matrix<T>) {
+pub fn find_shortest<T: Cell>(
+    matrix: &mut Matrix<T>,
+    start: &Position,
+    end: &Position,
+) -> (Vec<T>, Matrix<T>) {
     let mut start_pos = matrix[start].clone();
     let mut pq = BinaryHeap::new();
 
@@ -17,8 +21,12 @@ pub fn find_shortest<T: Cell>(matrix: &mut Matrix<T>, start: &Position, end: &Po
         for each in matrix.get_neighbours(&current) {
             match each {
                 Ok(neigbour) => {
-                    let cost = current.get_distance() + current.get_position().distance(&neigbour.get_position());
-                    if !neigbour.is_wall() && ( !matrix[(neigbour.get_position())].get_visited() || cost < matrix[(neigbour.get_position())].get_distance() ) {
+                    let cost = current.get_distance()
+                        + current.get_position().distance(&neigbour.get_position());
+                    if !neigbour.is_wall()
+                        && (!matrix[(neigbour.get_position())].get_visited()
+                            || cost < matrix[(neigbour.get_position())].get_distance())
+                    {
                         let heuristic = heuristic(neigbour.get_position(), &end);
                         matrix[(neigbour.get_position())].set_visited(true);
                         matrix[(neigbour.get_position())].set_distance(cost);
@@ -31,7 +39,7 @@ pub fn find_shortest<T: Cell>(matrix: &mut Matrix<T>, start: &Position, end: &Po
                     }
                 }
                 Err(_) => {
-                    break;
+                    continue;
                 }
             }
         }
@@ -46,10 +54,13 @@ pub fn find_shortest<T: Cell>(matrix: &mut Matrix<T>, start: &Position, end: &Po
 }
 
 pub fn heuristic(start: &Position, end: &Position) -> u32 {
-    cmp::max(i32::abs(start.i32x() - end.i32x()), i32::abs(start.i32y() - end.i32y())) as u32
+    cmp::max(
+        i32::abs(start.i32x() - end.i32x()),
+        i32::abs(start.i32y() - end.i32y()),
+    ) as u32
 }
 
-fn get_parents<T: Cell>(matrix: &mut Matrix<T>, start: &T, end: &Position) -> Vec<T>{
+fn get_parents<T: Cell>(matrix: &mut Matrix<T>, start: &T, end: &Position) -> Vec<T> {
     let mut path: Vec<T> = Vec::new();
     let mut parent: (u32, u32) = (0, 0);
     if let Some(parent_pos) = *matrix[(end)].get_parent() {
