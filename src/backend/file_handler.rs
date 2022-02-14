@@ -1,20 +1,10 @@
-use std::{fs::{
-    self,
-    File,
-    ReadDir,
-}, io::{
-    self,
-    Write,
-    ErrorKind
-}
-};
-use image::{
-    io::Reader as ImageReader,
-    RgbImage,
-    DynamicImage, ImageError,
-};
 use crate::backend::matrix::Matrix;
 use crate::cell::cell::Cell;
+use image::{io::Reader as ImageReader, DynamicImage, ImageError, RgbImage};
+use std::{
+    fs::{self, File, ReadDir},
+    io::{self, ErrorKind, Write},
+};
 
 #[derive(Clone)]
 pub struct FileHandler {
@@ -24,10 +14,7 @@ pub struct FileHandler {
 
 impl FileHandler {
     pub fn new(results: String, images: String) -> FileHandler {
-        FileHandler {
-            results,
-            images,
-        }
+        FileHandler { results, images }
     }
 
     pub fn write_image(&self, image: &RgbImage, file_name: &str) {
@@ -40,7 +27,10 @@ impl FileHandler {
         if let Ok(value) = ImageReader::open(format!("{}{}.jpg", self.images, file_name)) {
             return value.decode();
         };
-        Err(ImageError::IoError(io::Error::new(ErrorKind::InvalidInput, "Well shit")))
+        Err(ImageError::IoError(io::Error::new(
+            ErrorKind::InvalidInput,
+            "Well shit",
+        )))
     }
 
     pub fn write_matrix<T: Cell>(&self, matrix: &Matrix<T>) {

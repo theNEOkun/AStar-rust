@@ -4,22 +4,22 @@ mod djikstra;
 
 use std::io;
 
-use backend::{file_handler::FileHandler, DataHandle};
+use backend::file_handler::FileHandler;
 use cell::{cell::Position, MyCell};
 
 const RESULTS: &str = "./resources/results/";
 const IMAGES: &str = "./resources/images/";
 
 fn main() {
-    run();
+    if let Ok(_) = run() {};
 }
 
 fn run() -> io::Result<()> {
     let file_handler = FileHandler::new(String::from(RESULTS), String::from(IMAGES));
     let mut buffer;
-    let mut stdin = io::stdin();
-    if let Ok(Values) = file_handler.read_directory() {
-        for value in Values {
+    let stdin = io::stdin();
+    if let Ok(values) = file_handler.read_directory() {
+        for value in values {
             if let Some(name) = value?.path().file_name() {
                 println!("{:?}", name);
             }
